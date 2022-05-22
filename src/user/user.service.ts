@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import * as bcrypt from 'bcrypt'
-import { nanoid } from 'nanoid'
 import { PrismaService } from 'src/prisma.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserPasswordDto } from './dto/update-userPassword.dto'
@@ -40,9 +39,8 @@ export class UserService {
     const userExist = await this.findByEmail(data.email)
     if (userExist) throw new BadRequestException('User already exist')
     const hashedPassword = await this.hashPassword(password)
-    const tokenKey = nanoid(15)
     await this.prisma.user.create({
-      data: { email, tokenKey, password: hashedPassword },
+      data: { email, password: hashedPassword },
     })
     return { message: `User Account has been created` }
   }

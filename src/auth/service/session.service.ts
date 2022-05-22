@@ -13,8 +13,8 @@ export class SessionService {
     return await this.prisma.session.findFirst({ where })
   }
 
-  async create(req: FastifyRequest, data: SessionPayload) {
-    const { token, userId } = data
+  async create(payload: SessionPayload, req: FastifyRequest) {
+    const { token, userId } = payload
     const ip = req.ip
     const device = req.headers['user-agent']
     return await this.prisma.session.create({

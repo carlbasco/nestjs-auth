@@ -13,7 +13,6 @@ model User {
   password  String
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
-  tokenKey  String
   Session   Session[]
 }
 

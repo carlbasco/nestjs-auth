@@ -4,13 +4,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { FastifyReply, FastifyRequest } from 'fastify'
 import * as bcrypt from 'bcrypt'
-
+import { FastifyReply, FastifyRequest } from 'fastify'
 import { UserService } from 'src/user/user.service'
-import { SessionService } from './session.service'
-import { JwtService } from './jwt.service'
 import { LoginDto } from '../dto'
+import { JwtService } from './jwt.service'
+import { SessionService } from './session.service'
 
 @Injectable()
 export class AuthService {
@@ -34,23 +33,17 @@ export class AuthService {
     })
   }
 
-  async login(data: LoginDto, req: FastifyRequest, res: FastifyReply) {
-    const { email, password } = data
-    const user = await this.userService.findByEmail(email)
+  async login(payload: LoginDto, req: FastifyRequest, res: FastifyReply) {
+    const user = await this.userService.findByEmail(payload.email)
     if (!user) throw new BadRequestException('Email or Password is incorrect')
-    const validPassword = await bcrypt.compare(password, user.password)
+    const validPassword = await bcrypt.compare(payload.password, user.password)
     if (!validPassword)
       throw new BadRequestException('Email or Password is incorrect')
     if (!user.isActive)
       throw new BadRequestException('Your account has been banned')
-    const refreshToken = this.jwt.createRefreshToken({
-      id: user.id,
-      tokenKey: user.tokenKey,
-    })
-    await this.sessionService.create(req, {
-      userId: user.id,
-      token: refreshToken,
-    })
+    const refreshToken = this.jwt.createRefreshToken({ id: user.id })
+    const sessionPayload = { userId: user.id, token: refreshToken }
+    await this.sessionService.create(sessionPayload, req)
     this.setCookie(refreshToken, res)
     return this.jwt.createAccessToken({ id: user.id })
   }
@@ -89,18 +82,13 @@ export class AuthService {
     const payload = this.jwt.verifyRefreshToken(token)
     const user = await this.userService.findById(payload.id)
     if (!user) throw new UnauthorizedException()
-    if (user.tokenKey !== payload.tokenKey)
-      throw new UnauthorizedException('Session Expired')
     const session = await this.sessionService.findFirst({
       ip,
       token,
       userId: user.id,
     })
     if (!session) throw new UnauthorizedException('Session Expired')
-    const refreshToken = this.jwt.createRefreshToken({
-      id: user.id,
-      tokenKey: user.tokenKey,
-    })
+    const refreshToken = this.jwt.createRefreshToken({ id: user.id })
     await this.sessionService.update(session.id, refreshToken)
     this.setCookie(refreshToken, res)
     return this.jwt.createAccessToken({ id: user.id })

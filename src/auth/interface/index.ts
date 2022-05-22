@@ -1,6 +1,5 @@
 export interface RefreshTokenPayload {
   id: string
-  tokenKey: string
 }
 
 export interface AccessTokenPayload {
